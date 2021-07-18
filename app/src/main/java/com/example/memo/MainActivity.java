@@ -1,14 +1,20 @@
 package com.example.memo;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
@@ -16,6 +22,9 @@ import android.widget.TwoLineListItem;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import static android.app.AlertDialog.*;
+import static android.app.PendingIntent.getActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -38,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             // rawQueryというSELECT専用メソッドを使用してデータを取得する
             Cursor c = db.rawQuery("select uuid, body from MEMO_TABLE order by id", null);
+//            Cursor c = db.rawQuery("select body from MEMO_TABLE order by id", null);
             // Cursorの先頭行があるかどうか確認
             boolean next = c.moveToFirst();
 
@@ -45,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
             while (next) {
                 HashMap<String,String> data = new HashMap<>();
                 // 取得したカラムの順番(0から始まる)と型を指定してデータを取得する
-                String uuid = c.getString(0);
+//                String uuid = c.getString(0);
                 String body = c.getString(1);
                 if(body.length() > 10){
                     // リストに表示するのは10文字まで
@@ -53,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 // 引数には、(名前,実際の値)という組合せで指定します　名前はSimpleAdapterの引数で使用します
                 data.put("body",body);
-                data.put("id",uuid);
+//                data.put("id",uuid);
                 memoList.add(data);
                 // 次の行が存在するか確認
                 next = c.moveToNext();
@@ -87,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // インテント作成  第二引数にはパッケージ名からの指定で、遷移先クラスを指定
                 Intent intent = new Intent(MainActivity.this, com.example.memo.CreateMemo.class);
-
                 // 選択されたビューを取得 TwoLineListItemを取得した後、text2の値を取得する
                 TwoLineListItem two = (TwoLineListItem)view;
 //                TextView idTextView = (TextView)two.findViewById(android.R.id.text2);
@@ -117,14 +126,30 @@ public class MainActivity extends AppCompatActivity {
                 // 長押しした項目をデータベースから削除
                 SQLiteDatabase db = helper.getWritableDatabase();
                 try {
-                    db.execSQL("DELETE FROM MEMO_TABLE WHERE uuid = '"+ idStr +"'");
+                    Builder builder= new Builder(view.getContext());
+                    builder.setTitle("削除しますか？");
+                    final EditText input= new EditText(view.getContext());
+                    input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_NORMAL);
+                    builder.setView(input);
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            String m_Text = input.getText().toString();
+                        }
+                    });
+                    builder.setNegativeButton("キャンセル", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.cancel();
+                        }
+                    });
+                    builder.show();
                 } finally {
                     db.close();
                 }
                 // 長押しした項目を画面から削除
                 memoList.remove(position);
                 simpleAdapter.notifyDataSetChanged();
-
                 // trueにすることで通常のクリックイベントを発生させない
                 return true;
             }
